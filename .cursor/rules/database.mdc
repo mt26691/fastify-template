@@ -1,0 +1,118 @@
+---
+description: Database integration patterns for Fastify applications
+globs: **/*.{ts,js}
+alwaysApply: false
+---
+
+# Fastify Database Best Practices
+
+## Connection Management
+
+- Use Fastify plugins for database connections
+  - Register database connections as decorators
+  - Ensure proper connection lifecycle management
+  ```typescript
+  fastify.register(dbPlugin, {
+    connectionString: process.env.DATABASE_URL
+  })
+  ```
+- Implement connection pooling
+  - Configure appropriate pool sizes
+  - Monitor pool usage and adjust as needed
+- Handle connection errors gracefully
+  - Implement retry logic with exponential backoff
+  - Use circuit breakers for resilience
+
+## ORM/Query Builder Integration
+
+### Prisma
+- Use `@fastify/prisma` for integration
+- Generate types from schema
+- Implement proper error handling
+- Use transactions for complex operations
+
+### TypeORM
+- Register as a Fastify plugin
+- Use repository pattern
+- Implement custom repositories for complex queries
+- Enable query logging in development
+
+### Knex.js
+- Lightweight query builder option
+- Use migrations for schema management
+- Implement seed files for development data
+
+## Query Optimization
+
+- Use database indexes effectively
+  - Index foreign keys and frequently queried columns
+  - Monitor slow query logs
+- Implement pagination for large datasets
+  ```typescript
+  fastify.get('/users', async (request, reply) => {
+    const { page = 1, limit = 20 } = request.query
+    const offset = (page - 1) * limit
+    return await db.users.findMany({ skip: offset, take: limit })
+  })
+  ```
+- Use database views for complex queries
+- Implement caching strategies
+  - Redis for session data
+  - In-memory caching for frequently accessed data
+
+## Data Validation
+
+- Validate data at API level using JSON schemas
+- Implement database constraints
+  - Use foreign keys for referential integrity
+  - Add check constraints for business rules
+- Sanitize user input to prevent SQL injection
+- Use parameterized queries exclusively
+
+## Migration Strategy
+
+- Use migration tools (Prisma Migrate, TypeORM migrations, Knex migrations)
+- Version control all migrations
+- Test migrations in staging environment
+- Implement rollback procedures
+- Never modify existing migrations in production
+
+## Transaction Management
+
+- Use transactions for data consistency
+  ```typescript
+  await db.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: userData })
+    await tx.profile.create({ data: { ...profileData, userId: user.id } })
+    return user
+  })
+  ```
+- Implement saga pattern for distributed transactions
+- Keep transactions short to avoid locks
+- Handle transaction failures appropriately
+
+## Monitoring and Performance
+
+- Enable query logging in development
+- Monitor database performance metrics
+  - Query execution time
+  - Connection pool usage
+  - Lock wait times
+- Use database-specific profiling tools
+- Implement health checks for database connectivity
+
+## Security Best Practices
+
+- Never store sensitive data in plain text
+- Use environment variables for connection strings
+- Implement row-level security where needed
+- Audit database access and modifications
+- Regular backup and restore testing
+- Encrypt data at rest and in transit
+
+## Multi-tenancy Patterns
+
+- Schema-based isolation for complete separation
+- Row-level security for shared databases
+- Connection routing based on tenant
+- Implement proper data isolation testing

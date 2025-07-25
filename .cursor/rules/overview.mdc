@@ -1,0 +1,18 @@
+# Fastify Backend Development – Overview & Tech Stack
+
+## Overview
+
+This project uses Fastify as the web framework for building fast and efficient Node.js web applications.
+
+## Technology Stack
+
+- **Framework**: Fastify
+- **Language**: JavaScript/TypeScript
+- **Database**: Choose based on project needs (PostgreSQL, MongoDB, etc.)
+- **Testing**: Jest/Tap
+- **Validation**: Ajv (built into Fastify)
+  description:
+  globs:
+  alwaysApply: false
+
+---

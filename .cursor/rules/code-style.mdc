@@ -1,0 +1,46 @@
+# Code Style & Best Practices
+
+### File Structure
+
+```
+src/
+├── routes/
+│   ├── users.ts
+│   └── posts.ts
+├── plugins/
+│   ├── db.ts
+│   └── auth.ts
+├── schemas/
+│   ├── user.ts
+│   └── post.ts
+├── utils/
+└── app.ts
+```
+
+### Routing
+
+- Use Fastify's built-in routing system
+- Organize routes in separate files under `/routes`
+- Use route prefixes for API versioning
+- Always define schemas for request/response validation
+
+### Plugin System
+
+- Use Fastify's plugin architecture
+- Register plugins in a logical order
+- Follow the encapsulation principle
+
+### Error Handling
+
+- Use Fastify's built-in error handling
+- Return appropriate HTTP status codes
+
+### Performance
+
+- Implement caching strategies
+- Use connection pooling for databases
+  description:
+  globs:
+  alwaysApply: false
+
+---

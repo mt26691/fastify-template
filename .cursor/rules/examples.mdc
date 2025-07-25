@@ -1,0 +1,49 @@
+# Example Code Patterns
+
+### Basic Route
+
+```javascript
+async function routes(fastify, options) {
+  fastify.get('/', async (request, reply) => {
+    return { hello: 'world' };
+  });
+}
+module.exports = routes;
+```
+
+### With Schema Validation
+
+```javascript
+const schema = {
+  body: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      email: { type: 'string', format: 'email' },
+    },
+    required: ['name', 'email'],
+  },
+};
+
+fastify.post('/users', { schema }, async (request, reply) => {
+  // Handler logic
+});
+```
+
+### Plugin Example
+
+```javascript
+const fp = require('fastify-plugin');
+
+async function dbPlugin(fastify, options) {
+  // Database connection logic
+  fastify.decorate('db', db);
+}
+module.exports = fp(dbPlugin);
+```
+
+description:
+globs:
+alwaysApply: false
+
+---

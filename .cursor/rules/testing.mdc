@@ -1,0 +1,84 @@
+---
+description: Testing best practices for Fastify applications
+globs: **/*.{test,spec}.ts
+alwaysApply: false
+---
+
+# Fastify Testing Best Practices
+
+## Test Setup
+
+- Use Fastify's built-in testing utilities
+  - Utilize `fastify.inject()` for route testing
+  - Test without starting the server for faster execution
+- Use tap, Jest, or Vitest as test runners
+  - Tap is Fastify's recommended test framework
+  - Jest for broader ecosystem compatibility
+  - Vitest for modern ESM-first approach
+
+## Unit Testing
+
+- Follow the Arrange-Act-Assert convention
+- Test route handlers separately from business logic
+- Mock external dependencies using Fastify's DI container
+- Test plugins in isolation
+- Verify schema validation behavior
+- Test error handlers explicitly
+
+## Integration Testing
+
+- Use Testcontainers for database testing
+  - Spin up real PostgreSQL, MySQL, or MongoDB instances
+  - Example: `@testcontainers/postgresql` for PostgreSQL
+- Create test helpers for common operations
+  ```typescript
+  async function buildTestApp() {
+    const app = build({ logger: false })
+    await app.ready()
+    return app
+  }
+  ```
+- Test the full request/response cycle
+- Verify headers, status codes, and response bodies
+
+## Database Testing
+
+- Create isolated test databases
+  - Use unique database names per test suite
+  - Implement proper cleanup in afterEach/afterAll hooks
+- Implement test data factories
+  - Use libraries like `@faker-js/faker` for realistic data
+  - Create builder patterns for complex entities
+- Use transactions for test isolation
+  - Begin transaction before each test
+  - Rollback after test completion
+- Seed test data efficiently
+  - Create minimal required data per test
+  - Avoid shared test data between tests
+
+## E2E Testing
+
+- Test with real external services when possible
+- Use Docker Compose for complex setups
+- Include all required services (Redis, Elasticsearch, etc.)
+- Test rate limiting and authentication flows
+- Verify API documentation matches implementation
+
+## Performance Testing
+
+- Use autocannon for load testing
+  ```bash
+  npx autocannon -c 100 -d 30 http://localhost:3000/
+  ```
+- Test memory leaks with clinic.js
+- Monitor event loop delays
+- Benchmark critical paths
+
+## Best Practices
+
+- Keep tests fast and independent
+- Use descriptive test names
+- Test edge cases and error scenarios
+- Maintain >80% code coverage
+- Run tests in CI/CD pipeline
+- Use test.concurrent for parallel execution when safe

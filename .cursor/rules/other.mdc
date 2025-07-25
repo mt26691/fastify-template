@@ -1,0 +1,28 @@
+# Additional Guidelines
+
+## Dependencies to Consider
+
+- `@fastify/autoload`
+- `@fastify/cors`
+- `@fastify/helmet`
+- `@fastify/jwt`
+- `@fastify/swagger`
+
+## Testing
+
+- Use Fastify's testing utilities
+- Test routes with `fastify.inject()`
+
+## Security
+
+- Validate input with schemas
+- Use `@fastify/helmet` for security headers
+
+## Documentation
+
+- Use `@fastify/swagger` for API documentation
+  description:
+  globs:
+  alwaysApply: false
+
+---

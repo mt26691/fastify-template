@@ -13,9 +13,9 @@ export const app: FastifyPluginAsync = async (fastify, opts) => {
     options: { ...opts }
   })
 
-  // Register routes
+  // Register routes with v1 prefix
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
-    options: { ...opts }
+    options: { ...opts, prefix: '/v1' }
   })
 }

@@ -57,7 +57,7 @@ const signup: FastifyPluginAsync = async (fastify, _opts) => {
     try {
       const data = signUpSchema.parse(request.body)
       const result = await authService.signUp(data)
-      return reply.code(201).send(result)
+      return await reply.code(201).send(result)
     } catch (error) {
       if (error instanceof z.ZodError) {
         return reply.code(400).send({ error: error.errors[0].message })

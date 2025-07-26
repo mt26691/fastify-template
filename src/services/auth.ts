@@ -30,7 +30,7 @@ export interface JWTPayload {
 export class AuthService {
   constructor(private fastify: FastifyInstance) {}
 
-  async signUp(data: SignUpData): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async signUp(data: SignUpData): Promise<{ user: { id: string; name: string; username: string; email: string; role: UserRole; createdAt: Date }; accessToken: string; refreshToken: string }> {
     const { name, username, email, password } = data
 
     // Check if user already exists
@@ -120,7 +120,7 @@ export class AuthService {
     return result
   }
 
-  async signIn(data: SignInData, userAgent?: string): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async signIn(data: SignInData, userAgent?: string): Promise<{ user: { id: string; name: string; username: string; email: string; role: UserRole; createdAt: Date }; accessToken: string; refreshToken: string }> {
     const { username, password } = data
 
     // Find user by username or email
@@ -199,7 +199,7 @@ export class AuthService {
     return { user: userWithoutPassword, accessToken, refreshToken }
   }
 
-  async getUserSessions(userId: string): Promise<any[]> {
+  async getUserSessions(userId: string): Promise<Array<{ id: string; userAgent: string | null; accessTokenExpiry: Date; createdAt: Date }>> {
     return prisma.userSession.findMany({
       where: { userId },
       select: {
@@ -305,7 +305,7 @@ export class AuthService {
 
   async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
-      const payload = this.fastify.jwt.verify(token) as JWTPayload
+      const payload = this.fastify.jwt.verify<JWTPayload>(token)
 
       // Check if session exists and is valid
       const session = await prisma.userSession.findUnique({
@@ -320,14 +320,14 @@ export class AuthService {
       }
 
       return payload
-    } catch (error) {
+    } catch {
       return null
     }
   }
 
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
     try {
-      const payload = this.fastify.jwt.verify(refreshToken) as JWTPayload
+      const payload = this.fastify.jwt.verify<JWTPayload>(refreshToken)
 
       // Verify it's a refresh token
       if (payload.type !== 'refresh') {
@@ -394,7 +394,7 @@ export class AuthService {
       logger.info({ userId: session.userId, sessionId: session.id }, 'Access token refreshed')
       return { accessToken: newAccessToken, refreshToken: newRefreshToken }
     } catch (error) {
-      logger.error({ error }, 'Failed to refresh access token')
+      logger.error('Failed to refresh access token', error)
       return null
     }
   }

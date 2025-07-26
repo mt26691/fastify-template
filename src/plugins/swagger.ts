@@ -4,7 +4,7 @@ import swaggerUi from '@fastify/swagger-ui'
 import { FastifyPluginAsync } from 'fastify'
 import { config } from '@config/env'
 
-const swaggerPlugin: FastifyPluginAsync = async (fastify, opts) => {
+const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
   await fastify.register(swagger, {
     openapi: {
       info: {
@@ -14,7 +14,7 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, opts) => {
       },
       servers: [
         {
-          url: `http://localhost:${config.PORT}`,
+          url: `http://localhost:${String(config.PORT)}`,
           description: 'Development server'
         }
       ],
@@ -25,14 +25,14 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, opts) => {
   })
 
   await fastify.register(swaggerUi, {
-    routePrefix: '/documentation',
+    routePrefix: '/docs',
     uiConfig: {
       docExpansion: 'list',
       deepLinking: true
     },
     staticCSP: true,
     transformStaticCSP: (header) => header,
-    transformSpecification: (swaggerObject, request, reply) => swaggerObject,
+    transformSpecification: (swaggerObject, _request, _reply) => swaggerObject,
     transformSpecificationClone: true
   })
 }

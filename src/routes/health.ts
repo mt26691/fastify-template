@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 
-const health: FastifyPluginAsync = async (fastify, opts) => {
+const health: FastifyPluginAsync = async (fastify, _opts) => {
   fastify.get('/health', {
     schema: {
       description: 'Health check endpoint',
@@ -15,7 +15,7 @@ const health: FastifyPluginAsync = async (fastify, opts) => {
         }
       }
     }
-  }, async (request, reply) => {
+  }, (_request, _reply) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString()

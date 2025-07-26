@@ -12,6 +12,7 @@ A modern Fastify application template with TypeScript, Swagger documentation, an
 - 📦 **Path Aliases** - Clean imports using `@config`, `@plugins`, `@routes`
 - 🔥 **Hot Reload** - Development server with automatic restart on file changes
 - 📝 **Structured Logging** - Beautiful logs in development, JSON in production
+- ⏱️ **Request Timing** - Automatic request processing time measurement
 
 ## Project Structure
 
@@ -20,9 +21,12 @@ src/
 ├── config/
 │   └── env.ts          # Environment variable validation
 ├── plugins/
-│   └── swagger.ts      # Swagger/OpenAPI documentation setup
+│   ├── swagger.ts      # Swagger/OpenAPI documentation setup
+│   └── request-timer.ts # Request timing measurement
 ├── routes/
 │   └── health.ts       # Health check endpoint
+├── utils/
+│   └── logger.ts       # Standalone logger utility
 ├── app.ts              # Fastify app configuration
 └── server.ts           # Server entry point
 ```
@@ -69,7 +73,7 @@ src/
 ## API Documentation
 
 Once the server is running, you can access:
-- Swagger UI: `http://localhost:3000/documentation`
+- Swagger UI: `http://localhost:3000/docs`
 - Health check: `http://localhost:3000/health`
 
 ## Environment Variables
@@ -106,11 +110,13 @@ The project uses TypeScript path aliases for cleaner imports:
 - `@config/*` - Import from `src/config/`
 - `@plugins/*` - Import from `src/plugins/`
 - `@routes/*` - Import from `src/routes/`
+- `@utils/*` - Import from `src/utils/`
 - `@/*` - Import from `src/`
 
 Example:
 ```typescript
 import { config } from '@config/env'
+import { logger } from '@utils/logger'
 import { somePlugin } from '@plugins/custom'
 ```
 
@@ -161,6 +167,33 @@ const plugin: FastifyPluginAsync = async (fastify, opts) => {
 
 export default fp(plugin, {
   name: 'my-plugin'
+})
+```
+
+## Using the Logger
+
+The project includes a standalone logger utility for logging outside of Fastify request context:
+
+```typescript
+import { logger, logInfo, logError, createChildLogger } from '@utils/logger'
+
+// Basic logging
+logger.info('Server starting up')
+
+// Helper functions with context
+logInfo('User logged in', { userId: '123', email: 'user@example.com' })
+logError('Failed to connect to database', error, { service: 'database' })
+
+// Create child logger with persistent context
+const dbLogger = createChildLogger({ service: 'database' })
+dbLogger.info('Connected to database')
+```
+
+Within Fastify routes, use the request logger:
+```typescript
+fastify.get('/example', async (request, reply) => {
+  request.log.info('Processing request')
+  // ...
 })
 ```
 

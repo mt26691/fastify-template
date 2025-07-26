@@ -26,12 +26,12 @@ This is a modern Fastify TypeScript application with a clean architecture:
 
 ### Core Structure
 - `src/config/env.ts` - Environment validation using Zod, validates and types all env vars at startup
-- `src/plugins/` - Fastify plugins (loaded first), includes Swagger documentation setup
+- `src/plugins/` - Fastify plugins (loaded first), includes Swagger documentation and request timing
 - `src/routes/` - API route handlers, automatically loaded and registered
 
 ### Key Features
 1. **Environment Validation**: All environment variables are validated at startup using Zod schemas
-2. **Swagger Documentation**: Auto-generated API docs available at /documentation
+2. **Swagger Documentation**: Auto-generated API docs available at /docs
 3. **Type Safety**: Full TypeScript support with strict typing
 4. **Hot Reload**: Development server restarts automatically on file changes using tsx
 5. **Structured Logging**: Uses Pino with pretty printing in development

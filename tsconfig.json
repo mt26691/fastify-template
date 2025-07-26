@@ -16,6 +16,7 @@
       "@config/*": ["config/*"],
       "@plugins/*": ["plugins/*"],
       "@routes/*": ["routes/*"],
+      "@utils/*": ["utils/*"],
       "@/*": ["*"]
     },
     "allowImportingTsExtensions": false

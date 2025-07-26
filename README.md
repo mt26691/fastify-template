@@ -13,6 +13,9 @@ A modern Fastify application template with TypeScript, Swagger documentation, an
 - 🔥 **Hot Reload** - Development server with automatic restart on file changes
 - 📝 **Structured Logging** - Beautiful logs in development, JSON in production
 - ⏱️ **Request Timing** - Automatic request processing time measurement
+- 🗄️ **PostgreSQL + Prisma** - Type-safe database access with migrations
+- 🔑 **JWT Authentication** - Complete auth system with sessions management
+- 🧪 **Integration Testing** - Testcontainers for isolated database testing
 
 ## Project Structure
 
@@ -196,6 +199,82 @@ fastify.get('/example', async (request, reply) => {
   // ...
 })
 ```
+
+## Authentication System
+
+The template includes a complete JWT-based authentication system with the following features:
+
+### Endpoints
+
+- `POST /auth/signup` - Create a new user account (returns access & refresh tokens)
+- `POST /auth/signin` - Sign in with username/email and password (returns access & refresh tokens)
+- `POST /auth/refresh` - Refresh access token using refresh token
+- `GET /auth/sessions` - Get all active sessions (requires auth)
+- `DELETE /auth/sessions/:sessionId` - Invalidate specific session (requires auth)
+- `POST /auth/sessions/invalidate-all` - Invalidate all sessions (requires auth)
+- `POST /auth/password-reset/request` - Request password reset token
+- `POST /auth/password-reset/confirm` - Reset password with token
+
+### Token Strategy
+
+The authentication system uses a dual-token approach:
+- **Access Token**: Short-lived (15 minutes), used for API requests
+- **Refresh Token**: Long-lived (7 days), used to get new access tokens
+
+This provides better security as access tokens expire quickly, limiting exposure if compromised.
+
+### Database Schema
+
+**User**
+- `id`, `name`, `username`, `email`, `password`, `salt`, `role`, `createdAt`, `updatedAt`
+
+**UserSession**
+- `id`, `userId`, `accessToken`, `refreshToken`, `userAgent`, `accessTokenExpiry`, `refreshTokenExpiry`, `createdAt`, `updatedAt`
+
+**PasswordResetToken**
+- `id`, `userId`, `token`, `expiresAt`, `createdAt`
+
+### Default Seeded Users
+
+Running `npm run seed` creates the following test users:
+
+| Username | Email | Password | Role |
+|----------|-------|----------|------|
+| admin | admin@example.com | admin123 | ADMIN |
+| testuser | user@example.com | user123 | USER |
+| johndoe | john@example.com | john123 | USER |
+| janesmith | jane@example.com | jane123 | USER |
+| moderator | mod@example.com | mod123 | ADMIN |
+
+### Testing
+
+The project uses Vitest with Testcontainers for integration testing:
+
+```bash
+# Start PostgreSQL for development
+npm run docker:up
+
+# Run database migrations
+npm run db:migrate
+
+# Seed database with sample users
+npm run seed
+
+# Run all tests
+npm test
+
+# Run integration tests with isolated database
+npm run test:integration
+
+# Run tests with UI
+npm run test:ui
+```
+
+Integration tests automatically:
+- Spin up a PostgreSQL container
+- Run migrations
+- Execute tests with complete isolation
+- Clean up after completion
 
 ## License
 

@@ -16,6 +16,7 @@
       "@config/*": ["config/*"],
       "@plugins/*": ["plugins/*"],
       "@routes/*": ["routes/*"],
+      "@services/*": ["services/*"],
       "@utils/*": ["utils/*"],
       "@/*": ["*"]
     },

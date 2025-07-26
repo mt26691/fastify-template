@@ -19,8 +19,18 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
         }
       ],
       tags: [
-        { name: 'Health', description: 'Health check endpoints' }
-      ]
+        { name: 'Health', description: 'Health check endpoints' },
+        { name: 'Authentication', description: 'User authentication endpoints' }
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT'
+          }
+        }
+      }
     }
   })
 

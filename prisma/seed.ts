@@ -1,3 +1,4 @@
+import "../src/config/env"; // Import config first to set DATABASE_URL
 import { PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import { logger } from "../src/utils/logger";
@@ -49,6 +50,13 @@ async function seedUsers(users: UserSeedData[]): Promise<void> {
       });
     } catch (error) {
       logger.error(`Failed to seed user ${userData.email}:`, error);
+      // Log the full error details
+      if (error instanceof Error) {
+        logger.error("Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
+      }
     }
   }
 }

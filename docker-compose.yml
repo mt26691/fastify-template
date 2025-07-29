@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,11 +7,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-fastify_password}
       POSTGRES_DB: ${DB_NAME:-fastify_db}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - '${DB_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fastify}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-fastify}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +24,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-fastify_password}
       POSTGRES_DB: ${DB_NAME:-fastify_test_db}
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
     profiles:

@@ -13,8 +13,8 @@ alwaysApply: false
   - Ensure proper connection lifecycle management
   ```typescript
   fastify.register(dbPlugin, {
-    connectionString: process.env.DATABASE_URL
-  })
+    connectionString: process.env.DATABASE_URL,
+  });
   ```
 - Implement connection pooling
   - Configure appropriate pool sizes
@@ -26,18 +26,21 @@ alwaysApply: false
 ## ORM/Query Builder Integration
 
 ### Prisma
+
 - Use `@fastify/prisma` for integration
 - Generate types from schema
 - Implement proper error handling
 - Use transactions for complex operations
 
 ### TypeORM
+
 - Register as a Fastify plugin
 - Use repository pattern
 - Implement custom repositories for complex queries
 - Enable query logging in development
 
 ### Knex.js
+
 - Lightweight query builder option
 - Use migrations for schema management
 - Implement seed files for development data
@@ -50,10 +53,10 @@ alwaysApply: false
 - Implement pagination for large datasets
   ```typescript
   fastify.get('/users', async (request, reply) => {
-    const { page = 1, limit = 20 } = request.query
-    const offset = (page - 1) * limit
-    return await db.users.findMany({ skip: offset, take: limit })
-  })
+    const { page = 1, limit = 20 } = request.query;
+    const offset = (page - 1) * limit;
+    return await db.users.findMany({ skip: offset, take: limit });
+  });
   ```
 - Use database views for complex queries
 - Implement caching strategies
@@ -69,6 +72,17 @@ alwaysApply: false
 - Sanitize user input to prevent SQL injection
 - Use parameterized queries exclusively
 
+## Timestamp Best Practices
+
+- Always use timestamp with timezone for DateTime columns
+  ```prisma
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+  ```
+- Store timestamps in UTC to avoid timezone confusion
+- Use timezone-aware libraries for date manipulation
+- Consider using ISO 8601 format for API responses
+
 ## Migration Strategy
 
 - Use migration tools (Prisma Migrate, TypeORM migrations, Knex migrations)
@@ -82,10 +96,10 @@ alwaysApply: false
 - Use transactions for data consistency
   ```typescript
   await db.$transaction(async (tx) => {
-    const user = await tx.user.create({ data: userData })
-    await tx.profile.create({ data: { ...profileData, userId: user.id } })
-    return user
-  })
+    const user = await tx.user.create({ data: userData });
+    await tx.profile.create({ data: { ...profileData, userId: user.id } });
+    return user;
+  });
   ```
 - Implement saga pattern for distributed transactions
 - Keep transactions short to avoid locks

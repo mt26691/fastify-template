@@ -1,13 +1,15 @@
+# Please create the .env file in the root of the project first before running this command
+# docker compose up -d
 services:
   postgres:
     image: postgres:16-alpine
     container_name: fastify_postgres
     environment:
-      POSTGRES_USER: ${DB_USER:-fastify}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-fastify_password}
-      POSTGRES_DB: ${DB_NAME:-fastify_db}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - '${DB_PORT}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,9 +22,9 @@ services:
     image: postgres:16-alpine
     container_name: fastify_postgres_test
     environment:
-      POSTGRES_USER: ${DB_USER:-fastify}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-fastify_password}
-      POSTGRES_DB: ${DB_NAME:-fastify_test_db}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - '5433:5432'
     volumes:

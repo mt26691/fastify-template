@@ -23,8 +23,8 @@ model User {
   password  String
   salt      String
   role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
 
   sessions     UserSession[]
   resetTokens  PasswordResetToken[]
@@ -35,18 +35,20 @@ model User {
 model UserSession {
   id                 String   @id @default(cuid())
   userId             String
-  accessToken        String   @unique
+  deviceId           String   @db.Uuid
   refreshToken       String   @unique
   userAgent          String?
-  accessTokenExpiry  DateTime
-  refreshTokenExpiry DateTime
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  browser            String?
+  ipAddresses        String[]
+  refreshTokenExpiry DateTime @db.Timestamptz
+  revokedAt          DateTime? @db.Timestamptz
+  createdAt          DateTime @default(now()) @db.Timestamptz
+  updatedAt          DateTime @updatedAt @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([accessToken])
+  @@index([deviceId])
   @@index([refreshToken])
   @@map("user_sessions")
 }
@@ -55,8 +57,8 @@ model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  expiresAt DateTime @db.Timestamptz
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

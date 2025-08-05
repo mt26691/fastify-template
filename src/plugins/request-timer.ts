@@ -11,14 +11,17 @@ const requestTimer: FastifyPluginAsync = async (fastify) => {
       const endTime = process.hrtime.bigint()
       const responseTimeNs = endTime - request.startTime
       const responseTimeMs = Number(responseTimeNs / 1000000n)
-      
+
       // Add our custom timing to the log context
-      request.log.info({
-        processedTimeMs: responseTimeMs,
-        endpoint: request.url,
-        method: request.method,
-        statusCode: reply.statusCode
-      }, 'request timing')
+      request.log.info(
+        {
+          processedTimeMs: responseTimeMs,
+          endpoint: request.url,
+          method: request.method,
+          statusCode: reply.statusCode,
+        },
+        'request timing'
+      )
     }
     return payload
   })
@@ -32,5 +35,5 @@ declare module 'fastify' {
 }
 
 export default fp(requestTimer, {
-  name: 'request-timer'
+  name: 'request-timer',
 })

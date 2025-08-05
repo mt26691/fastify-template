@@ -10,18 +10,18 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).pipe(z.number().positive()).default('3000'),
   HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  
+
   // Database
   DB_USER: z.string(),
   DB_PASSWORD: z.string(),
   DB_NAME: z.string(),
   DB_PORT: z.string().transform(Number).pipe(z.number().positive()),
-  
+
   // JWT
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
-  
+
   // Bcrypt
   BCRYPT_ROUNDS: z.string().transform(Number).pipe(z.number().positive()).default('10'),
 })

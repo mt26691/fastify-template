@@ -91,8 +91,12 @@ const usersRoute: FastifyPluginAsync = async (fastify, _opts) => {
 
         // Build where clause
         interface WhereClause {
-          OR?: Array<{ name?: { contains: string; mode: 'insensitive' }; username?: { contains: string; mode: 'insensitive' }; email?: { contains: string; mode: 'insensitive' } }>;
-          role?: 'USER' | 'ADMIN';
+          OR?: Array<{
+            name?: { contains: string; mode: 'insensitive' }
+            username?: { contains: string; mode: 'insensitive' }
+            email?: { contains: string; mode: 'insensitive' }
+          }>
+          role?: 'USER' | 'ADMIN'
         }
         const where: WhereClause = {}
         if (query.search) {
@@ -141,7 +145,7 @@ const usersRoute: FastifyPluginAsync = async (fastify, _opts) => {
         if (error instanceof z.ZodError) {
           return await reply.code(400).send({ error: error.errors[0].message })
         }
-        
+
         fastify.log.error(error)
         return await reply.code(500).send({ error: 'Internal server error' })
       }

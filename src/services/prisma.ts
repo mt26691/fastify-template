@@ -26,11 +26,14 @@ export const prisma = new PrismaClient({
 // Log Prisma queries in development
 if (config.NODE_ENV === 'development') {
   prisma.$on('query', (e) => {
-    logger.debug({
-      query: e.query,
-      params: e.params,
-      duration: e.duration,
-    }, 'Prisma Query')
+    logger.debug(
+      {
+        query: e.query,
+        params: e.params,
+        duration: e.duration,
+      },
+      'Prisma Query'
+    )
   })
 }
 

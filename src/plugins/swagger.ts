@@ -10,43 +10,43 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
       info: {
         title: 'Fastify API',
         description: 'API documentation for Fastify application',
-        version: '1.0.0'
+        version: '1.0.0',
       },
       servers: [
         {
           url: `http://localhost:${String(config.PORT)}`,
-          description: 'Development server'
-        }
+          description: 'Development server',
+        },
       ],
       tags: [
         { name: 'Health', description: 'Health check endpoints' },
-        { name: 'Authentication', description: 'User authentication endpoints' }
+        { name: 'Authentication', description: 'User authentication endpoints' },
       ],
       components: {
         securitySchemes: {
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
-            bearerFormat: 'JWT'
-          }
-        }
-      }
-    }
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+    },
   })
 
   await fastify.register(swaggerUi, {
     routePrefix: '/docs',
     uiConfig: {
       docExpansion: 'list',
-      deepLinking: true
+      deepLinking: true,
     },
     staticCSP: true,
     transformStaticCSP: (header) => header,
     transformSpecification: (swaggerObject, _request, _reply) => swaggerObject,
-    transformSpecificationClone: true
+    transformSpecificationClone: true,
   })
 }
 
 export default fp(swaggerPlugin, {
-  name: 'swagger'
+  name: 'swagger',
 })

@@ -1,281 +1,245 @@
-# Fastify TypeScript Template
+# Fastify Production Template
 
-A modern Fastify application template with TypeScript, Swagger documentation, and environment validation.
+A production-ready Fastify template with TypeScript, featuring a modular architecture, comprehensive testing, and enterprise-grade tooling.
 
-## Features
+## 🚀 60-Second Quick Start
 
-- ⚡ **Fastify** - Fast and low overhead web framework
-- 🔷 **TypeScript** - Type safety and modern JavaScript features
-- 📚 **Swagger/OpenAPI** - Auto-generated API documentation
-- 🔐 **Environment Validation** - Runtime validation of environment variables using Zod
-- 🏗️ **Modular Architecture** - Clean separation of routes, plugins, and configuration
-- 📦 **Path Aliases** - Clean imports using `@config`, `@plugins`, `@routes`
-- 🔥 **Hot Reload** - Development server with automatic restart on file changes
-- 📝 **Structured Logging** - Beautiful logs in development, JSON in production
-- ⏱️ **Request Timing** - Automatic request processing time measurement
-- 🗄️ **PostgreSQL + Prisma** - Type-safe database access with migrations
-- 🔑 **JWT Authentication** - Complete auth system with sessions management
-- 🧪 **Integration Testing** - Testcontainers for isolated database testing
+```bash
+# Clone and install
+git clone https://github.com/mt26691/fastify-template.git
+cd fastify-template
+npm install
 
-## Project Structure
+# Setup environment
+cp .env.example .env
+
+# Start development (with hot reload)
+npm run dev
+
+# Run with Docker
+docker compose up -d
+```
+
+Visit http://localhost:3000/docs for API documentation.
+
+## 📐 Architecture
 
 ```
 src/
-├── config/
-│   └── env.ts          # Environment variable validation
-├── plugins/
-│   ├── swagger.ts      # Swagger/OpenAPI documentation setup
-│   └── request-timer.ts # Request timing measurement
-├── routes/
-│   └── health.ts       # Health check endpoint
-├── utils/
-│   └── logger.ts       # Standalone logger utility
-├── app.ts              # Fastify app configuration
-└── server.ts           # Server entry point
+├── app.ts                   # Fastify instance builder
+├── server.ts               # Entry point
+├── config/                 # Configuration
+│   └── env.ts             # Environment validation (Zod)
+├── plugins/               # Global Fastify plugins
+│   ├── jwt.ts            # JWT authentication
+│   ├── prisma.ts         # Database client
+│   ├── sensible.ts       # Error handling
+│   └── swagger.ts        # API documentation
+├── modules/              # Feature modules
+│   ├── user/
+│   │   ├── user.routes.ts       # Route definitions
+│   │   ├── user.schema.ts       # TypeBox schemas
+│   │   ├── user.controller.ts   # Request handlers
+│   │   ├── user.service.ts      # Business logic
+│   │   ├── user.repo.prisma.ts  # Data access
+│   │   └── tests/
+│   │       ├── unit/
+│   │       └── integration/
+│   ├── auth/
+│   └── health/
+├── types/                # Type definitions
+└── scripts/             # Utility scripts
 ```
 
-## Prerequisites
+### Key Design Principles
 
-- Node.js 18+ 
-- npm or yarn
+1. **Module-based architecture**: Each feature is self-contained with its own routes, schemas, services, and tests
+2. **Type-safe validation**: TypeBox schemas with automatic TypeScript type inference
+3. **Layered architecture**: Clear separation between routes → controllers → services → repositories
+4. **Plugin system**: Fastify's powerful plugin architecture for code organization
+5. **Dependency injection**: Services receive dependencies through constructors
 
-## Getting Started
+## 🛠️ Tech Stack
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd fastify-template
-   ```
+- **Runtime**: Node.js 20+ with ESM
+- **Framework**: Fastify 5.x
+- **Language**: TypeScript 5.x (strict mode)
+- **Validation**: TypeBox with Fastify Type Provider
+- **Database**: PostgreSQL + Prisma ORM
+- **Authentication**: JWT with refresh tokens
+- **Testing**: Vitest + Testcontainers
+- **Documentation**: OpenAPI/Swagger
+- **Logging**: Pino
+- **Code Quality**: ESLint (flat config) + Prettier
+- **CI/CD**: GitHub Actions
+- **Containerization**: Docker (multi-stage, distroless)
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-   The server will start on `http://localhost:3000`
-
-## Available Scripts
-
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build the TypeScript project
-- `npm start` - Start production server (requires build)
-- `npm run lint` - Run ESLint
-- `npm run typecheck` - Run TypeScript type checking
-- `npm test` - Run tests with Vitest
-
-## API Documentation
-
-Once the server is running, you can access:
-- Swagger UI: `http://localhost:3000/docs`
-- Health check: `http://localhost:3000/health`
-
-## Environment Variables
-
-The application uses a **fail-fast approach** for environment validation:
-
-### Why Fail-Fast Environment Validation?
-
-The `src/config/env.ts` file validates ALL environment variables at startup using Zod schemas. This approach:
-
-- **Prevents silent failures**: Missing or invalid environment variables are caught immediately at startup, not during runtime
-- **Improves production safety**: No surprises in production - if the app starts, all config is valid
-- **Provides clear error messages**: Shows exactly which variables are missing or invalid
-- **Type safety**: Provides full TypeScript types for all environment variables throughout the application
-- **No hidden defaults**: Explicitly fails rather than falling back to potentially dangerous default values
-
-The application will NOT start if any required environment variables are missing or invalid. This is intentional - it's better to fail loudly at startup than to run with misconfigured settings.
-
-### Available Environment Variables
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| NODE_ENV | `development\|production\|test` | `development` | Application environment |
-| PORT | number | `3000` | Server port |
-| HOST | string | `0.0.0.0` | Server host |
-| LOG_LEVEL | `fatal\|error\|warn\|info\|debug\|trace\|silent` | `info` | Logging level |
-
-Note: While some variables have defaults for development convenience, in production you should explicitly set ALL environment variables.
-
-## Path Aliases
-
-The project uses TypeScript path aliases for cleaner imports:
-
-- `@config/*` - Import from `src/config/`
-- `@plugins/*` - Import from `src/plugins/`
-- `@routes/*` - Import from `src/routes/`
-- `@utils/*` - Import from `src/utils/`
-- `@/*` - Import from `src/`
-
-Example:
-```typescript
-import { config } from '@config/env'
-import { logger } from '@utils/logger'
-import { somePlugin } from '@plugins/custom'
-```
-
-## Adding New Routes
-
-1. Create a new file in `src/routes/`
-2. Export a Fastify plugin:
-
-```typescript
-import { FastifyPluginAsync } from 'fastify'
-
-const routes: FastifyPluginAsync = async (fastify, opts) => {
-  fastify.get('/example', {
-    schema: {
-      description: 'Example endpoint',
-      tags: ['Example'],
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            message: { type: 'string' }
-          }
-        }
-      }
-    }
-  }, async (request, reply) => {
-    return { message: 'Hello World' }
-  })
-}
-
-export default routes
-```
-
-Routes are automatically loaded by `@fastify/autoload`.
-
-## Adding New Plugins
-
-1. Create a new file in `src/plugins/`
-2. Export a Fastify plugin using `fastify-plugin`:
-
-```typescript
-import fp from 'fastify-plugin'
-import { FastifyPluginAsync } from 'fastify'
-
-const plugin: FastifyPluginAsync = async (fastify, opts) => {
-  // Plugin logic here
-}
-
-export default fp(plugin, {
-  name: 'my-plugin'
-})
-```
-
-## Using the Logger
-
-The project includes a standalone logger utility for logging outside of Fastify request context:
-
-```typescript
-import { logger, logInfo, logError, createChildLogger } from '@utils/logger'
-
-// Basic logging
-logger.info('Server starting up')
-
-// Helper functions with context
-logInfo('User logged in', { userId: '123', email: 'user@example.com' })
-logError('Failed to connect to database', error, { service: 'database' })
-
-// Create child logger with persistent context
-const dbLogger = createChildLogger({ service: 'database' })
-dbLogger.info('Connected to database')
-```
-
-Within Fastify routes, use the request logger:
-```typescript
-fastify.get('/example', async (request, reply) => {
-  request.log.info('Processing request')
-  // ...
-})
-```
-
-## Authentication System
-
-The template includes a complete JWT-based authentication system with the following features:
-
-### Endpoints
-
-- `POST /auth/signup` - Create a new user account (returns access & refresh tokens)
-- `POST /auth/signin` - Sign in with username/email and password (returns access & refresh tokens)
-- `POST /auth/refresh` - Refresh access token using refresh token
-- `GET /auth/sessions` - Get all active sessions (requires auth)
-- `DELETE /auth/sessions/:sessionId` - Invalidate specific session (requires auth)
-- `POST /auth/sessions/invalidate-all` - Invalidate all sessions (requires auth)
-- `POST /auth/password-reset/request` - Request password reset token
-- `POST /auth/password-reset/confirm` - Reset password with token
-
-### Token Strategy
-
-The authentication system uses a dual-token approach:
-- **Access Token**: Short-lived (15 minutes), used for API requests
-- **Refresh Token**: Long-lived (7 days), used to get new access tokens
-
-This provides better security as access tokens expire quickly, limiting exposure if compromised.
-
-### Database Schema
-
-**User**
-- `id`, `name`, `username`, `email`, `password`, `salt`, `role`, `createdAt`, `updatedAt`
-
-**UserSession**
-- `id`, `userId`, `accessToken`, `refreshToken`, `userAgent`, `accessTokenExpiry`, `refreshTokenExpiry`, `createdAt`, `updatedAt`
-
-**PasswordResetToken**
-- `id`, `userId`, `token`, `expiresAt`, `createdAt`
-
-### Default Seeded Users
-
-Running `npm run seed` creates the following test users:
-
-| Username | Email | Password | Role |
-|----------|-------|----------|------|
-| admin | admin@example.com | admin123 | ADMIN |
-| testuser | user@example.com | user123 | USER |
-| johndoe | john@example.com | john123 | USER |
-| janesmith | jane@example.com | jane123 | USER |
-| moderator | mod@example.com | mod123 | ADMIN |
-
-### Testing
-
-The project uses Vitest with Testcontainers for integration testing:
+## 📦 Available Scripts
 
 ```bash
-# Start PostgreSQL for development
-npm run docker:up
+# Development
+npm run dev              # Start with hot reload
+npm run build           # Compile TypeScript
+npm start               # Run production build
 
-# Run database migrations
-npm run db:migrate
+# Database
+npm run db:generate     # Generate Prisma client
+npm run db:migrate      # Run migrations
+npm run db:push        # Push schema changes
+npm run db:studio      # Open Prisma Studio
+npm run db:seed        # Seed database
 
-# Seed database with sample users
-npm run seed
+# Testing
+npm test               # Run unit tests
+npm run test:integration # Run integration tests
+npm run test:ui        # Open Vitest UI
 
-# Run all tests
-npm test
+# Code Quality
+npm run lint           # Run ESLint
+npm run lint:fix       # Fix ESLint issues
+npm run format         # Format with Prettier
+npm run typecheck      # Type checking
 
-# Run integration tests with isolated database
-npm run test:integration
-
-# Run tests with UI
-npm run test:ui
+# Docker
+npm run docker:up      # Start services
+npm run docker:down    # Stop services
 ```
 
-Integration tests automatically:
-- Spin up a PostgreSQL container
-- Run migrations
-- Execute tests with complete isolation
-- Clean up after completion
+## 🔧 Configuration
 
-## License
+Environment variables are validated at startup using Zod:
 
-ISC
+```typescript
+// src/config/env.ts
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']),
+  PORT: z.coerce.number().default(3000),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  // ... more validations
+})
+```
+
+## 🧪 Testing Strategy
+
+### Unit Tests
+- Service logic isolation
+- Repository mocking
+- Schema validation
+
+### Integration Tests
+- Full route testing
+- Database transactions
+- Authentication flows
+
+### Coverage Requirements
+- Minimum 80% coverage
+- CI enforcement
+- Badge generation
+
+## 🔐 Authentication & Authorization
+
+### JWT-based Authentication
+- Access tokens (15min)
+- Refresh tokens (7 days)
+- Session management
+- Device tracking
+
+### RBAC (Role-Based Access Control)
+- User roles: USER, ADMIN
+- Route-level protection
+- Resource ownership validation
+
+## 📚 API Documentation
+
+Interactive Swagger UI available at `/docs` in development.
+
+### Example Endpoints
+
+```typescript
+// Health check
+GET /health
+
+// Authentication
+POST /auth/signup
+POST /auth/signin
+POST /auth/refresh
+POST /auth/signout
+GET  /auth/sessions
+
+// Users (protected)
+GET    /users        # Admin only
+GET    /users/:id    # Admin or self
+PATCH  /users/:id    # Admin or self
+DELETE /users/:id    # Admin only
+```
+
+## 🚢 Production Deployment
+
+### Docker Deployment
+
+```bash
+# Build and run
+docker build -t fastify-app .
+docker run -p 3000:3000 --env-file .env fastify-app
+
+# Or use docker-compose
+docker compose --profile prod up -d
+```
+
+### Environment Setup
+
+1. Copy `.env.example` to `.env`
+2. Set strong `JWT_SECRET` (min 32 chars)
+3. Configure `DATABASE_URL`
+4. Set `NODE_ENV=production`
+
+### Health Checks
+
+```bash
+# Local
+curl http://localhost:3000/health
+
+# Readiness (includes DB check)
+curl http://localhost:3000/health/ready
+```
+
+## 🤝 Contributing
+
+### Development Workflow
+
+1. Create feature branch from `develop`
+2. Implement changes with tests
+3. Ensure all checks pass:
+   ```bash
+   npm run lint && npm run typecheck && npm test
+   ```
+4. Create PR with description
+
+### Commit Convention
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation
+- `test:` Testing
+- `refactor:` Code refactoring
+- `chore:` Maintenance
+
+### Code Style
+
+- Functions ≤ 40 lines
+- Explicit return types
+- No `any` types
+- Comprehensive JSDoc
+
+## 📄 License
+
+MIT - see [LICENSE](LICENSE) file
+
+## 🔗 Resources
+
+- [Fastify Documentation](https://fastify.dev/)
+- [TypeBox Documentation](https://github.com/sinclairzx81/typebox)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Project Issues](https://github.com/mt26691/fastify-template/issues)

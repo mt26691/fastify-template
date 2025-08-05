@@ -28,7 +28,11 @@ export const logInfo = (message: string, context?: Record<string, unknown>): voi
   logger.info(context, message)
 }
 
-export const logError = (message: string, error?: Error, context?: Record<string, unknown>): void => {
+export const logError = (
+  message: string,
+  error?: Error,
+  context?: Record<string, unknown>
+): void => {
   logger.error({ ...context, error }, message)
 }
 

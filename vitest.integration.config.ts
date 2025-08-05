@@ -6,7 +6,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./test/integration/setup.ts'],
-    include: ['test/integration/**/*.test.ts'],
+    include: [
+      'test/integration/**/*.test.ts',
+      'src/modules/**/tests/integration/**/*.test.ts'
+    ],
     sequence: {
       hooks: 'list',
     },

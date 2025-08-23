@@ -1,9 +1,12 @@
 import { beforeAll, afterAll, beforeEach } from 'vitest'
 import { config as dotenvConfig } from 'dotenv'
-import { prisma } from '@services/prisma'
+import { prisma } from '../../src/services/prisma.js'
 import { execSync } from 'child_process'
-import { PostgreSqlContainer, StartedPostgreSqlContainer } from 'testcontainers'
-import { logger } from '@utils/logger'
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql'
+import { logger } from '../../src/utils/logger.js'
+
+// Set NODE_ENV before loading environment variables
+process.env.NODE_ENV = 'test'
 
 // Load test environment variables
 dotenvConfig({ path: '.env.test' })

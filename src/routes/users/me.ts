@@ -2,7 +2,6 @@ import { FastifyPluginAsync } from 'fastify'
 import { prisma } from '@services/prisma'
 import { z } from 'zod'
 
-
 // Schema for update request
 const updateUserBodySchema = z.object({
   name: z.string().min(1).optional(),
@@ -144,7 +143,7 @@ const meRoute: FastifyPluginAsync = async (fastify, _opts) => {
     async (request, reply) => {
       try {
         const validatedBody = updateUserBodySchema.parse(request.body)
-        
+
         // Check if any data was provided
         if (Object.keys(validatedBody).length === 0) {
           return await reply.code(400).send({ error: 'No data provided to update' })
@@ -204,7 +203,7 @@ const meRoute: FastifyPluginAsync = async (fastify, _opts) => {
         if (error instanceof z.ZodError) {
           return await reply.code(400).send({ error: error.errors[0].message })
         }
-        
+
         fastify.log.error(error)
         return await reply.code(500).send({ error: 'Internal server error' })
       }

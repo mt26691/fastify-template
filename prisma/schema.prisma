@@ -28,6 +28,7 @@ model User {
 
   sessions     UserSession[]
   resetTokens  PasswordResetToken[]
+  apiKeys      ApiKey[]
 
   @@map("users")
 }
@@ -65,4 +66,20 @@ model PasswordResetToken {
   @@index([token])
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  key       String    @unique @map("api_key")
+  name      String?   @map("name")
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  lastUsed  DateTime? @map("last_used") @db.Timestamptz
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
+  isActive  Boolean   @default(true) @map("is_active")
+
+  @@index([userId], name: "api_key_user_id_idx")
+  @@index([key], name: "api_key_key_idx")
+  @@map("api_keys")
 }

@@ -13,10 +13,12 @@ export type FastifyPluginAsyncTypebox = FastifyPluginAsync<
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+    adminOnly: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
     prisma: import('@prisma/client').PrismaClient
   }
 
   interface FastifyRequest {
     user?: UserType
+    apiKeyAuth?: boolean
   }
 }

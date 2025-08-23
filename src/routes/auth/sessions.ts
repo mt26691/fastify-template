@@ -33,7 +33,7 @@ const sessions: FastifyPluginAsync = async (fastify, _opts) => {
       if (!request.user) {
         return await reply.code(401).send({ error: 'Unauthorized' })
       }
-      const sessions = await authService.getUserSessions(request.user.userId as string)
+      const sessions = await authService.getUserSessions(request.user.id)
       return sessions
     }
   )
@@ -66,7 +66,7 @@ const sessions: FastifyPluginAsync = async (fastify, _opts) => {
         return await reply.code(401).send({ error: 'Unauthorized' })
       }
       const { sessionId } = request.params as { sessionId: string }
-      await authService.invalidateSession(sessionId, request.user.userId as string)
+      await authService.invalidateSession(sessionId, request.user.id)
       return await reply.code(204).send()
     }
   )
@@ -91,7 +91,7 @@ const sessions: FastifyPluginAsync = async (fastify, _opts) => {
       if (!request.user) {
         return await reply.code(401).send({ error: 'Unauthorized' })
       }
-      await authService.invalidateAllSessions(request.user.userId as string)
+      await authService.invalidateAllSessions(request.user.id)
       return await reply.code(204).send()
     }
   )

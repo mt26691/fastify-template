@@ -56,7 +56,7 @@ const meRoute: FastifyPluginAsync = async (fastify, _opts) => {
           return await reply.code(401).send({ error: 'Unauthorized' })
         }
 
-        const userId = request.user.userId as string
+        const userId = request.user.id
         const user = await prisma.user.findUnique({
           where: {
             id: userId,
@@ -158,7 +158,7 @@ const meRoute: FastifyPluginAsync = async (fastify, _opts) => {
           const existingUser = await prisma.user.findFirst({
             where: {
               AND: [
-                { id: { not: request.user.userId as string } },
+                { id: { not: request.user.id } },
                 {
                   OR: [
                     validatedBody.username ? { username: validatedBody.username } : {},
@@ -180,7 +180,7 @@ const meRoute: FastifyPluginAsync = async (fastify, _opts) => {
         }
 
         // Update user
-        const userId = request.user.userId as string
+        const userId = request.user.id
         const updatedUser = await prisma.user.update({
           where: {
             id: userId,

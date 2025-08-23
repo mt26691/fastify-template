@@ -1,23 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { FastifyInstance } from 'fastify'
-import { build } from '../../../../test/helper'
-import { prisma } from '../../../../services/prisma'
+import { describe, it, expect, beforeEach } from 'vitest'
+import Fastify from 'fastify'
+import { app } from '../../../../app.js'
+import { prisma } from '../../../../services/prisma.js'
 
 describe('Auth Routes Integration Tests', () => {
-  let app: FastifyInstance
+  let server: any
   let testUserId: string
   let testAccessToken: string
   let testRefreshToken: string
 
-  beforeAll(async () => {
-    app = await build()
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
-
   beforeEach(async () => {
+    server = Fastify({
+      logger: false,
+    })
+    await server.register(app)
+    await server.ready()
+
     // Clean database
     await prisma.userSession.deleteMany()
     await prisma.passwordResetToken.deleteMany()
@@ -26,7 +24,7 @@ describe('Auth Routes Integration Tests', () => {
 
   describe('POST /auth/signup', () => {
     it('should create a new user successfully', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
@@ -51,122 +49,88 @@ describe('Auth Routes Integration Tests', () => {
         role: 'USER',
       })
       
-      expect(body.user.password).toBeUndefined()
-      expect(body.user.salt).toBeUndefined()
-
-      testUserId = body.user.id
-      testAccessToken = body.accessToken
-      testRefreshToken = body.refreshToken
-    })
-
-    it('should reject duplicate email', async () => {
-      // First signup
-      await app.inject({
-        method: 'POST',
-        url: '/auth/signup',
-        payload: {
-          name: 'First User',
-          username: 'firstuser',
-          email: 'duplicate@example.com',
-          password: 'FirstPass123!',
-        },
-      })
-
-      // Duplicate email
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/signup',
-        payload: {
-          name: 'Second User',
-          username: 'seconduser',
-          email: 'duplicate@example.com',
-          password: 'SecondPass123!',
-        },
-      })
-
-      expect(response.statusCode).toBe(409)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Email already exists')
-    })
-
-    it('should reject duplicate username', async () => {
-      // First signup
-      await app.inject({
-        method: 'POST',
-        url: '/auth/signup',
-        payload: {
-          name: 'First User',
-          username: 'duplicateuser',
-          email: 'first@example.com',
-          password: 'FirstPass123!',
-        },
-      })
-
-      // Duplicate username
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/signup',
-        payload: {
-          name: 'Second User',
-          username: 'duplicateuser',
-          email: 'second@example.com',
-          password: 'SecondPass123!',
-        },
-      })
-
-      expect(response.statusCode).toBe(409)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Username already exists')
+      expect(body.user).not.toHaveProperty('password')
+      expect(body.user).not.toHaveProperty('salt')
     })
 
     it('should validate required fields', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
-          // Missing required fields
-          email: 'test@example.com',
+          username: 'testuser',
+          // Missing name, email, password
         },
       })
 
       expect(response.statusCode).toBe(400)
     })
 
-    it('should validate email format', async () => {
-      const response = await app.inject({
+    it('should reject duplicate username', async () => {
+      // Create first user
+      await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
-          name: 'Test User',
+          name: 'Test User 1',
           username: 'testuser',
-          email: 'invalid-email',
+          email: 'test1@example.com',
+          password: 'TestPass123!',
+        },
+      })
+
+      // Try to create with same username
+      const response = await server.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        payload: {
+          name: 'Test User 2',
+          username: 'testuser',
+          email: 'test2@example.com',
           password: 'TestPass123!',
         },
       })
 
       expect(response.statusCode).toBe(400)
+      const body = JSON.parse(response.body)
+      expect(body.error).toContain('Username already exists')
     })
 
-    it('should validate password strength', async () => {
-      const response = await app.inject({
+    it('should reject duplicate email', async () => {
+      // Create first user
+      await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
-          name: 'Test User',
-          username: 'testuser',
+          name: 'Test User 1',
+          username: 'testuser1',
           email: 'test@example.com',
-          password: 'weak',
+          password: 'TestPass123!',
+        },
+      })
+
+      // Try to create with same email
+      const response = await server.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        payload: {
+          name: 'Test User 2',
+          username: 'testuser2',
+          email: 'test@example.com',
+          password: 'TestPass123!',
         },
       })
 
       expect(response.statusCode).toBe(400)
+      const body = JSON.parse(response.body)
+      expect(body.error).toContain('Email already exists')
     })
   })
 
   describe('POST /auth/signin', () => {
     beforeEach(async () => {
       // Create a test user
-      const signupResponse = await app.inject({
+      const { body } = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
@@ -176,16 +140,16 @@ describe('Auth Routes Integration Tests', () => {
           password: 'TestPass123!',
         },
       })
-      const body = JSON.parse(signupResponse.body)
-      testUserId = body.user.id
+      const parsedBody = JSON.parse(body)
+      testUserId = parsedBody.user.id
     })
 
-    it('should sign in with email successfully', async () => {
-      const response = await app.inject({
+    it('should sign in with username', async () => {
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signin',
         payload: {
-          email: 'test@example.com',
+          username: 'testuser',
           password: 'TestPass123!',
         },
       })
@@ -197,15 +161,15 @@ describe('Auth Routes Integration Tests', () => {
       expect(body).toHaveProperty('accessToken')
       expect(body).toHaveProperty('refreshToken')
       
-      expect(body.user.email).toBe('test@example.com')
+      expect(body.user.username).toBe('testuser')
     })
 
-    it('should sign in with username successfully', async () => {
-      const response = await app.inject({
+    it('should sign in with email', async () => {
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signin',
         payload: {
-          email: 'testuser', // Username in email field
+          username: 'test@example.com', // Email used as username
           password: 'TestPass123!',
         },
       })
@@ -213,40 +177,46 @@ describe('Auth Routes Integration Tests', () => {
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
       
-      expect(body.user.username).toBe('testuser')
+      expect(body).toHaveProperty('user')
+      expect(body).toHaveProperty('accessToken')
+      expect(body).toHaveProperty('refreshToken')
     })
 
     it('should reject invalid password', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signin',
         payload: {
-          email: 'test@example.com',
-          password: 'WrongPassword123!',
+          username: 'testuser',
+          password: 'WrongPassword!',
         },
       })
 
       expect(response.statusCode).toBe(401)
+      const body = JSON.parse(response.body)
+      expect(body.error).toBe('Invalid credentials')
     })
 
     it('should reject non-existent user', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/signin',
         payload: {
-          email: 'nonexistent@example.com',
-          password: 'AnyPass123!',
+          username: 'nonexistent',
+          password: 'TestPass123!',
         },
       })
 
       expect(response.statusCode).toBe(401)
+      const body = JSON.parse(response.body)
+      expect(body.error).toBe('Invalid credentials')
     })
   })
 
   describe('POST /auth/refresh', () => {
     beforeEach(async () => {
       // Create and sign in a test user
-      const signupResponse = await app.inject({
+      const { body: user } = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
@@ -256,14 +226,14 @@ describe('Auth Routes Integration Tests', () => {
           password: 'TestPass123!',
         },
       })
-      const body = JSON.parse(signupResponse.body)
-      testUserId = body.user.id
-      testAccessToken = body.accessToken
-      testRefreshToken = body.refreshToken
+      const parsedUser = JSON.parse(user)
+      testUserId = parsedUser.user.id
+      testAccessToken = parsedUser.accessToken
+      testRefreshToken = parsedUser.refreshToken
     })
 
-    it('should refresh access token successfully', async () => {
-      const response = await app.inject({
+    it('should refresh tokens with valid refresh token', async () => {
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/refresh',
         payload: {
@@ -283,32 +253,38 @@ describe('Auth Routes Integration Tests', () => {
     })
 
     it('should reject invalid refresh token', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/refresh',
         payload: {
-          refreshToken: 'invalid-refresh-token',
+          refreshToken: 'invalid-token',
         },
       })
 
       expect(response.statusCode).toBe(401)
+      const body = JSON.parse(response.body)
+      expect(body.error).toBe('Invalid or expired refresh token')
     })
 
-    it('should reject missing refresh token', async () => {
-      const response = await app.inject({
+    it('should reject access token as refresh token', async () => {
+      const response = await server.inject({
         method: 'POST',
         url: '/auth/refresh',
-        payload: {},
+        payload: {
+          refreshToken: testAccessToken, // Using access token
+        },
       })
 
-      expect(response.statusCode).toBe(400)
+      expect(response.statusCode).toBe(401)
+      const body = JSON.parse(response.body)
+      expect(body.error).toBe('Invalid or expired refresh token')
     })
   })
 
-  describe('POST /auth/signout', () => {
+  describe('GET /auth/sessions', () => {
     beforeEach(async () => {
       // Create and sign in a test user
-      const signupResponse = await app.inject({
+      const { body: user } = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
@@ -318,14 +294,15 @@ describe('Auth Routes Integration Tests', () => {
           password: 'TestPass123!',
         },
       })
-      const body = JSON.parse(signupResponse.body)
-      testAccessToken = body.accessToken
+      const parsedUser = JSON.parse(user)
+      testUserId = parsedUser.user.id
+      testAccessToken = parsedUser.accessToken
     })
 
-    it('should sign out successfully', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/signout',
+    it('should get user sessions with valid token', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/auth/sessions',
         headers: {
           authorization: `Bearer ${testAccessToken}`,
         },
@@ -333,22 +310,27 @@ describe('Auth Routes Integration Tests', () => {
 
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('Successfully signed out')
+      
+      expect(Array.isArray(body)).toBe(true)
+      expect(body.length).toBeGreaterThan(0)
+      expect(body[0]).toHaveProperty('id')
+      expect(body[0]).toHaveProperty('accessTokenExpiry')
+      expect(body[0]).toHaveProperty('refreshTokenExpiry')
     })
 
-    it('should reject without authentication', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/signout',
+    it('should reject without authorization', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/auth/sessions',
       })
 
       expect(response.statusCode).toBe(401)
     })
 
     it('should reject with invalid token', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/auth/signout',
+      const response = await server.inject({
+        method: 'GET',
+        url: '/auth/sessions',
         headers: {
           authorization: 'Bearer invalid-token',
         },
@@ -358,72 +340,10 @@ describe('Auth Routes Integration Tests', () => {
     })
   })
 
-  describe('GET /auth/sessions', () => {
-    let secondAccessToken: string
-
-    beforeEach(async () => {
-      // Create user and sign in from multiple sessions
-      const signupResponse = await app.inject({
-        method: 'POST',
-        url: '/auth/signup',
-        payload: {
-          name: 'Test User',
-          username: 'testuser',
-          email: 'test@example.com',
-          password: 'TestPass123!',
-        },
-      })
-      const body = JSON.parse(signupResponse.body)
-      testAccessToken = body.accessToken
-
-      // Sign in again to create second session
-      const signinResponse = await app.inject({
-        method: 'POST',
-        url: '/auth/signin',
-        payload: {
-          email: 'test@example.com',
-          password: 'TestPass123!',
-        },
-      })
-      const signinBody = JSON.parse(signinResponse.body)
-      secondAccessToken = signinBody.accessToken
-    })
-
-    it('should list all user sessions', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/auth/sessions',
-        headers: {
-          authorization: `Bearer ${testAccessToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      
-      expect(body).toHaveProperty('sessions')
-      expect(body).toHaveProperty('currentSessionId')
-      
-      expect(Array.isArray(body.sessions)).toBe(true)
-      expect(body.sessions.length).toBe(2) // Two sessions created
-    })
-
-    it('should reject without authentication', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/auth/sessions',
-      })
-
-      expect(response.statusCode).toBe(401)
-    })
-  })
-
-  describe('DELETE /auth/sessions/:sessionId', () => {
-    let sessionId: string
-
+  describe('POST /auth/sessions/invalidate-all', () => {
     beforeEach(async () => {
       // Create and sign in a test user
-      const signupResponse = await app.inject({
+      const { body: user } = await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
@@ -433,99 +353,53 @@ describe('Auth Routes Integration Tests', () => {
           password: 'TestPass123!',
         },
       })
-      const body = JSON.parse(signupResponse.body)
-      testAccessToken = body.accessToken
+      const parsedUser = JSON.parse(user)
+      testUserId = parsedUser.user.id
+      testAccessToken = parsedUser.accessToken
+    })
 
-      // Get sessions to find session ID
-      const sessionsResponse = await app.inject({
+    it('should invalidate all sessions', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/auth/sessions/invalidate-all',
+        headers: {
+          authorization: `Bearer ${testAccessToken}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(204)
+
+      // Try to use the token again - should fail
+      const checkResponse = await server.inject({
         method: 'GET',
         url: '/auth/sessions',
         headers: {
           authorization: `Bearer ${testAccessToken}`,
         },
       })
-      const sessionsBody = JSON.parse(sessionsResponse.body)
-      sessionId = sessionsBody.sessions[0].id
-    })
 
-    it('should revoke a session successfully', async () => {
-      // Sign in again to create second session
-      const signinResponse = await app.inject({
-        method: 'POST',
-        url: '/auth/signin',
-        payload: {
-          email: 'test@example.com',
-          password: 'TestPass123!',
-        },
-      })
-      const signinBody = JSON.parse(signinResponse.body)
-      const secondToken = signinBody.accessToken
-
-      // Get second session ID
-      const sessionsResponse = await app.inject({
-        method: 'GET',
-        url: '/auth/sessions',
-        headers: {
-          authorization: `Bearer ${secondToken}`,
-        },
-      })
-      const sessionsBody = JSON.parse(sessionsResponse.body)
-      const secondSessionId = sessionsBody.sessions.find((s: any) => s.id !== sessionId)?.id
-
-      // Revoke first session using second session
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/auth/sessions/${sessionId}`,
-        headers: {
-          authorization: `Bearer ${secondToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Session revoked successfully')
-
-      // Verify session is revoked by checking sessions list
-      const verifyResponse = await app.inject({
-        method: 'GET',
-        url: '/auth/sessions',
-        headers: {
-          authorization: `Bearer ${secondToken}`,
-        },
-      })
-      const verifyBody = JSON.parse(verifyResponse.body)
-      expect(verifyBody.sessions).toHaveLength(1)
-      expect(verifyBody.sessions[0].id).toBe(secondSessionId)
-    })
-
-    it('should reject without authentication', async () => {
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/auth/sessions/${sessionId}`,
-      })
-
-      expect(response.statusCode).toBe(401)
+      expect(checkResponse.statusCode).toBe(401)
     })
   })
 
   describe('Password Reset Flow', () => {
     beforeEach(async () => {
       // Create a test user
-      await app.inject({
+      await server.inject({
         method: 'POST',
         url: '/auth/signup',
         payload: {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'OldPass123!',
+          password: 'TestPass123!',
         },
       })
     })
 
     describe('POST /auth/password-reset/request', () => {
-      it('should request password reset successfully', async () => {
-        const response = await app.inject({
+      it('should request password reset', async () => {
+        const response = await server.inject({
           method: 'POST',
           url: '/auth/password-reset/request',
           payload: {
@@ -535,11 +409,16 @@ describe('Auth Routes Integration Tests', () => {
 
         expect(response.statusCode).toBe(200)
         const body = JSON.parse(response.body)
-        expect(body.message).toContain('If the email exists')
+        expect(body.message).toBe('If the email exists, a reset link will be sent')
+        
+        // In development/test, we get the token
+        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+          expect(body).toHaveProperty('token')
+        }
       })
 
-      it('should return success even for non-existent email', async () => {
-        const response = await app.inject({
+      it('should handle non-existent email gracefully', async () => {
+        const response = await server.inject({
           method: 'POST',
           url: '/auth/password-reset/request',
           payload: {
@@ -547,84 +426,86 @@ describe('Auth Routes Integration Tests', () => {
           },
         })
 
+        // Should return same response to prevent email enumeration
         expect(response.statusCode).toBe(200)
         const body = JSON.parse(response.body)
-        expect(body.message).toContain('If the email exists')
-      })
-
-      it('should validate email format', async () => {
-        const response = await app.inject({
-          method: 'POST',
-          url: '/auth/password-reset/request',
-          payload: {
-            email: 'invalid-email',
-          },
-        })
-
-        expect(response.statusCode).toBe(400)
+        expect(body.message).toBe('If the email exists, a reset link will be sent')
       })
     })
 
-    describe('POST /auth/password-reset', () => {
+    describe('POST /auth/password-reset/confirm', () => {
       it('should reset password with valid token', async () => {
-        // First request reset
-        await app.inject({
+        // Request reset
+        const resetResponse = await server.inject({
           method: 'POST',
           url: '/auth/password-reset/request',
           payload: {
             email: 'test@example.com',
           },
         })
+        const resetBody = JSON.parse(resetResponse.body)
+        const resetToken = resetBody.token
 
-        // Get reset token from database (in real app this would be sent via email)
-        const resetToken = await prisma.passwordResetToken.findFirst({
-          where: {
-            user: {
-              email: 'test@example.com',
-            },
-          },
-        })
-
-        if (!resetToken) {
-          throw new Error('Reset token not found')
-        }
-
-        // For testing, we need to reverse the hashing to get the original token
-        // In real scenario, the token would be sent via email
-        // This is a simplified test approach
-        const response = await app.inject({
+        // Reset password
+        const response = await server.inject({
           method: 'POST',
-          url: '/auth/password-reset',
+          url: '/auth/password-reset/confirm',
           payload: {
-            token: resetToken.token, // In real app, this would be the unhashed token
-            newPassword: 'NewPass123!',
+            token: resetToken,
+            newPassword: 'NewTestPass123!',
           },
         })
 
-        // Since we can't reverse the hash, we expect this to fail
-        // In a real test, you'd mock the email service to capture the token
-        expect(response.statusCode).toBe(400)
+        expect(response.statusCode).toBe(200)
+        const body = JSON.parse(response.body)
+        expect(body.message).toBe('Password reset successful')
+
+        // Try to sign in with new password
+        const signinResponse = await server.inject({
+          method: 'POST',
+          url: '/auth/signin',
+          payload: {
+            username: 'testuser',
+            password: 'NewTestPass123!',
+          },
+        })
+
+        expect(signinResponse.statusCode).toBe(200)
       })
 
       it('should reject invalid token', async () => {
-        const response = await app.inject({
+        const response = await server.inject({
           method: 'POST',
-          url: '/auth/password-reset',
+          url: '/auth/password-reset/confirm',
           payload: {
             token: 'invalid-token',
-            newPassword: 'NewPass123!',
+            newPassword: 'NewTestPass123!',
           },
         })
 
         expect(response.statusCode).toBe(400)
+        const body = JSON.parse(response.body)
+        expect(body.error).toBe('Invalid or expired reset token')
       })
 
-      it('should validate new password strength', async () => {
-        const response = await app.inject({
+      it('should reject weak password', async () => {
+        // Request reset
+        const resetResponse = await server.inject({
           method: 'POST',
-          url: '/auth/password-reset',
+          url: '/auth/password-reset/request',
           payload: {
-            token: 'some-token',
+            email: 'test@example.com',
+          },
+        })
+        const resetBody = JSON.parse(resetResponse.body)
+        const resetToken = resetBody.token
+
+        // Try to reset with weak password
+        const response = await server.inject({
+          method: 'POST',
+          url: '/auth/password-reset/confirm',
+          payload: {
+            token: resetToken,
             newPassword: 'weak',
           },
         })

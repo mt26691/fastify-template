@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import Fastify from 'fastify'
-import { app } from '@/app'
+import { app } from '../../src/app.js'
 
 describe('Authentication API', () => {
   let server: any
@@ -22,7 +22,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -50,7 +50,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser1',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -62,13 +62,13 @@ describe('Authentication API', () => {
           name: 'Test User 2',
           username: 'testuser2',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
-      expect(response.statusCode).toBe(400)
+      expect(response.statusCode).toBe(409)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Email already exists')
+      expect(body.message).toContain('Email already exists')
     })
 
     it('should reject duplicate username', async () => {
@@ -80,7 +80,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test1@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -92,13 +92,13 @@ describe('Authentication API', () => {
           name: 'Test User 2',
           username: 'testuser',
           email: 'test2@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
-      expect(response.statusCode).toBe(400)
+      expect(response.statusCode).toBe(409)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Username already exists')
+      expect(body.message).toContain('Username already exists')
     })
 
     it('should validate input', async () => {
@@ -127,7 +127,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
     })
@@ -138,7 +138,7 @@ describe('Authentication API', () => {
         url: '/auth/signin',
         payload: {
           username: 'testuser',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -156,7 +156,7 @@ describe('Authentication API', () => {
         url: '/auth/signin',
         payload: {
           username: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -179,7 +179,7 @@ describe('Authentication API', () => {
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Invalid credentials')
+      expect(body.message).toBe('Invalid credentials')
     })
 
     it('should reject non-existent user', async () => {
@@ -188,13 +188,13 @@ describe('Authentication API', () => {
         url: '/auth/signin',
         payload: {
           username: 'nonexistent',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Invalid credentials')
+      expect(body.message).toBe('Invalid credentials')
     })
   })
 
@@ -212,9 +212,14 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
+      
+      if (signupResponse.statusCode !== 201) {
+        throw new Error(`Signup failed: ${signupResponse.body}`)
+      }
+      
       const signupBody = JSON.parse(signupResponse.body)
       authToken = signupBody.accessToken
       refreshToken = signupBody.refreshToken
@@ -284,7 +289,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -293,7 +298,7 @@ describe('Authentication API', () => {
         url: '/auth/signin',
         payload: {
           username: 'testuser',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
 
@@ -303,6 +308,9 @@ describe('Authentication API', () => {
     })
 
     it('should refresh access token with valid refresh token', async () => {
+      // Small delay to ensure tokens are different
+      await new Promise(resolve => setTimeout(resolve, 10))
+      
       const response = await server.inject({
         method: 'POST',
         url: '/auth/refresh',
@@ -315,6 +323,8 @@ describe('Authentication API', () => {
       const body = JSON.parse(response.body)
       expect(body).toHaveProperty('accessToken')
       expect(body).toHaveProperty('refreshToken')
+      
+      // New tokens should be different from initial ones
       expect(body.accessToken).not.toBe(initialAccessToken)
       expect(body.refreshToken).not.toBe(initialRefreshToken)
     })
@@ -330,7 +340,7 @@ describe('Authentication API', () => {
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Invalid or expired refresh token')
+      expect(body.message).toBe('Invalid or expired refresh token')
     })
 
     it('should reject using access token as refresh token', async () => {
@@ -344,7 +354,7 @@ describe('Authentication API', () => {
 
       expect(response.statusCode).toBe(401)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Invalid or expired refresh token')
+      expect(body.message).toBe('Invalid or expired refresh token')
     })
 
     it('should use new access token after refresh', async () => {
@@ -383,7 +393,7 @@ describe('Authentication API', () => {
           name: 'Test User',
           username: 'testuser',
           email: 'test@example.com',
-          password: 'password123',
+          password: 'TestPass123!',
         },
       })
     })
@@ -457,7 +467,7 @@ describe('Authentication API', () => {
 
       expect(response.statusCode).toBe(400)
       const body = JSON.parse(response.body)
-      expect(body.error).toBe('Invalid or expired reset token')
+      expect(body.message).toBe('Invalid or expired reset token')
     })
   })
 })

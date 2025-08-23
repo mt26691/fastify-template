@@ -1,22 +1,22 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { FastifyInstance } from 'fastify'
-import { build } from '../../../../test/helper'
-import { prisma } from '../../../../services/prisma'
+import { describe, it, expect, beforeEach } from 'vitest'
+import Fastify from 'fastify'
+import { app } from '../../../../app.js'
+import { prisma } from '../../../../services/prisma.js'
 
 describe('Health Routes Integration Tests', () => {
-  let app: FastifyInstance
+  let server: any
 
-  beforeAll(async () => {
-    app = await build()
-  })
-
-  afterAll(async () => {
-    await app.close()
+  beforeEach(async () => {
+    server = Fastify({
+      logger: false,
+    })
+    await server.register(app)
+    await server.ready()
   })
 
   describe('GET /health', () => {
     it('should return health status', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
       })
@@ -35,7 +35,7 @@ describe('Health Routes Integration Tests', () => {
     })
 
     it('should return valid ISO timestamp', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
       })
@@ -48,7 +48,7 @@ describe('Health Routes Integration Tests', () => {
     })
 
     it('should be accessible without authentication', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
         headers: {
@@ -79,7 +79,7 @@ describe('Health Routes Integration Tests', () => {
 
   describe('GET /health/ready', () => {
     it('should return ready status when database is connected', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health/ready',
       })
@@ -99,7 +99,7 @@ describe('Health Routes Integration Tests', () => {
       // Disconnect database
       await prisma.$disconnect()
 
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health/ready',
       })
@@ -115,7 +115,7 @@ describe('Health Routes Integration Tests', () => {
     })
 
     it('should be accessible without authentication', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health/ready',
         headers: {
@@ -129,7 +129,7 @@ describe('Health Routes Integration Tests', () => {
     it('should handle database query timeout gracefully', async () => {
       // This test would ideally mock a slow database query
       // For now, we just test that the endpoint responds
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health/ready',
       })
@@ -143,7 +143,7 @@ describe('Health Routes Integration Tests', () => {
     it('should respond quickly', async () => {
       const start = Date.now()
       
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
       })
@@ -157,7 +157,7 @@ describe('Health Routes Integration Tests', () => {
     it('readiness check should complete within reasonable time', async () => {
       const start = Date.now()
       
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health/ready',
       })
@@ -171,7 +171,7 @@ describe('Health Routes Integration Tests', () => {
 
   describe('Health Check Headers', () => {
     it('should return correct content type', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
       })
@@ -180,7 +180,7 @@ describe('Health Routes Integration Tests', () => {
     })
 
     it('should not have cache headers', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
         url: '/health',
       })

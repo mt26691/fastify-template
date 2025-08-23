@@ -49,10 +49,6 @@ const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         }
         throw error
       }
-      // This line should never be reached due to the throw
-      /* c8 ignore next 2 */
-      return await reply.code(500).send({ error: 'Internal server error' })
-      return reply.code(201).send(result)
     }
   )
 
@@ -78,13 +74,15 @@ const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request, reply) => {
-      // Convert email to username field for auth service
-      const signInData = {
-        username: request.body.email, // AuthService accepts username field which can be email
-        password: request.body.password,
+      try {
+        const result = await authService.signIn(request.body, request.headers['user-agent'])
+        return reply.send(result)
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Invalid credentials') {
+          throw fastify.httpErrors.unauthorized(error.message)
+        }
+        throw error
       }
-      const result = await authService.signIn(signInData, request.headers['user-agent'])
-      return reply.send(result)
     }
   )
 
@@ -278,15 +276,21 @@ const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request, reply) => {
-      await authService.requestPasswordReset(request.body.email)
-      // Always return success to prevent email enumeration
-      return reply.send({ message: 'If the email exists, a reset link has been sent' })
+      const result = await authService.requestPasswordReset(request.body.email)
+      const response: any = { message: 'If the email exists, a reset link will be sent' }
+      
+      // In development/test mode, include the token
+      if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        response.token = result
+      }
+      
+      return reply.send(response)
     }
   )
 
   // Reset password
   fastify.post(
-    '/password-reset',
+    '/password-reset/confirm',
     {
       schema: {
         tags: ['auth'],
@@ -306,8 +310,15 @@ const authRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request, reply) => {
-      await authService.resetPassword(request.body.token, request.body.newPassword)
-      return reply.send({ message: 'Password reset successfully' })
+      try {
+        await authService.resetPassword(request.body.token, request.body.newPassword)
+        return reply.send({ message: 'Password reset successful' })
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Invalid or expired reset token') {
+          throw fastify.httpErrors.badRequest(error.message)
+        }
+        throw error
+      }
     }
   )
 }

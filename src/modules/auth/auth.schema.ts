@@ -9,7 +9,7 @@ export const SignUpBody = Type.Object({
 })
 
 export const SignInBody = Type.Object({
-  email: Type.String({ format: 'email' }),
+  username: Type.String({ minLength: 1 }), // Can be username or email
   password: Type.String(),
   userAgent: Type.Optional(Type.String()),
 })

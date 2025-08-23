@@ -37,9 +37,11 @@ if (!parsedEnv.success) {
 
 export const config = parsedEnv.data
 
-// Construct DATABASE_URL for Prisma
-const databaseUrl = `postgresql://${config.DB_USER}:${config.DB_PASSWORD}@localhost:${String(config.DB_PORT)}/${config.DB_NAME}?schema=public`
-process.env.DATABASE_URL = databaseUrl
+// Construct DATABASE_URL for Prisma (only if not already set by test environment)
+if (!process.env.DATABASE_URL) {
+  const databaseUrl = `postgresql://${config.DB_USER}:${config.DB_PASSWORD}@localhost:${String(config.DB_PORT)}/${config.DB_NAME}?schema=public`
+  process.env.DATABASE_URL = databaseUrl
+}
 
 // Type for the config
 export type Config = z.infer<typeof envSchema>

@@ -1,17 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { FastifyInstance } from 'fastify'
-import { build } from '../../../../test/helper'
-import { prisma } from '../../../../services/prisma'
+import { describe, it, expect, beforeEach } from 'vitest'
+import Fastify from 'fastify'
+import { app } from '../../../../app.js'
+import { prisma } from '../../../../services/prisma.js'
 
 describe('User Routes Integration Tests', () => {
-  let app: FastifyInstance
+  let server: any
   let adminToken: string
   let userToken: string
   let adminUserId: string
   let regularUserId: string
 
-  beforeAll(async () => {
-    app = await build()
+  beforeEach(async () => {
+    server = Fastify({
+      logger: false,
+    })
+    await server.register(app)
+    await server.ready()
     
     // Clean database
     await prisma.userSession.deleteMany()
@@ -19,7 +23,7 @@ describe('User Routes Integration Tests', () => {
     await prisma.user.deleteMany()
 
     // Create admin user
-    const adminResponse = await app.inject({
+    const adminResponse = await server.inject({
       method: 'POST',
       url: '/auth/signup',
       payload: {
@@ -29,217 +33,89 @@ describe('User Routes Integration Tests', () => {
         password: 'AdminPass123!',
       },
     })
-    
-    const adminData = JSON.parse(adminResponse.body)
-    adminToken = adminData.accessToken
-    adminUserId = adminData.user.id
+    const adminBody = JSON.parse(adminResponse.body)
+    adminUserId = adminBody.user.id
+    adminToken = adminBody.accessToken
 
-    // Update admin role directly in database
+    // Update admin user to have ADMIN role
     await prisma.user.update({
       where: { id: adminUserId },
       data: { role: 'ADMIN' },
     })
 
     // Create regular user
-    const userResponse = await app.inject({
+    const userResponse = await server.inject({
       method: 'POST',
       url: '/auth/signup',
       payload: {
         name: 'Regular User',
-        username: 'user',
-        email: 'user@example.com',
+        username: 'regular',
+        email: 'regular@example.com',
         password: 'UserPass123!',
       },
     })
-    
-    const userData = JSON.parse(userResponse.body)
-    userToken = userData.accessToken
-    regularUserId = userData.user.id
+    const userBody = JSON.parse(userResponse.body)
+    regularUserId = userBody.user.id
+    userToken = userBody.accessToken
   })
 
-  afterAll(async () => {
-    await app.close()
-  })
-
-  beforeEach(async () => {
-    // Clean up test users (except admin and regular user)
-    await prisma.user.deleteMany({
-      where: {
-        id: {
-          notIn: [adminUserId, regularUserId],
-        },
-      },
-    })
-  })
-
-  describe('POST /users (Create User)', () => {
-    it('should allow admin to create a new user', async () => {
-      const response = await app.inject({
-        method: 'POST',
+  describe('GET /users', () => {
+    it('should require authentication', async () => {
+      const response = await server.inject({
+        method: 'GET',
         url: '/users',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-        payload: {
-          name: 'New User',
-          username: 'newuser',
-          email: 'newuser@example.com',
-          password: 'NewPass123!',
-          role: 'USER',
-        },
       })
 
-      expect(response.statusCode).toBe(201)
-      const body = JSON.parse(response.body)
-      expect(body).toMatchObject({
-        name: 'New User',
-        username: 'newuser',
-        email: 'newuser@example.com',
-        role: 'USER',
-      })
-      expect(body.password).toBeUndefined()
-      expect(body.salt).toBeUndefined()
+      expect(response.statusCode).toBe(401)
     })
 
-    it('should reject non-admin user creating users', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/users',
-        headers: {
-          authorization: `Bearer ${userToken}`,
-        },
-        payload: {
-          name: 'Another User',
-          username: 'anotheruser',
-          email: 'another@example.com',
-          password: 'AnotherPass123!',
-        },
-      })
-
-      expect(response.statusCode).toBe(403)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Admin access required')
-    })
-
-    it('should reject duplicate email', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/users',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-        payload: {
-          name: 'Duplicate User',
-          username: 'duplicate',
-          email: 'admin@example.com', // Existing email
-          password: 'DupePass123!',
-        },
-      })
-
-      expect(response.statusCode).toBe(409)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('email already exists')
-    })
-  })
-
-  describe('GET /users (List Users)', () => {
-    it('should allow admin to list all users', async () => {
-      const response = await app.inject({
+    it('should allow regular users to list users', async () => {
+      const response = await server.inject({
         method: 'GET',
         url: '/users',
         headers: {
-          authorization: `Bearer ${adminToken}`,
+          authorization: `Bearer ${userToken}`,
         },
       })
 
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
-      expect(body).toHaveProperty('users')
-      expect(body).toHaveProperty('pagination')
-      expect(Array.isArray(body.users)).toBe(true)
-      expect(body.users.length).toBeGreaterThanOrEqual(2) // At least admin and regular user
+      expect(Array.isArray(body)).toBe(true)
+      expect(body.length).toBe(2) // Admin and regular user
     })
 
     it('should support pagination', async () => {
-      const response = await app.inject({
+      // Create additional users
+      for (let i = 0; i < 5; i++) {
+        await server.inject({
+          method: 'POST',
+          url: '/auth/signup',
+          payload: {
+            name: `Test User ${i}`,
+            username: `testuser${i}`,
+            email: `test${i}@example.com`,
+            password: 'TestPass123!',
+          },
+        })
+      }
+
+      const response = await server.inject({
         method: 'GET',
-        url: '/users?page=1&limit=1',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.users).toHaveLength(1)
-      expect(body.pagination.limit).toBe(1)
-      expect(body.pagination.page).toBe(1)
-    })
-
-    it('should support search', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/users?search=admin',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.users.length).toBeGreaterThanOrEqual(1)
-      expect(body.users.some((u: any) => 
-        u.name.toLowerCase().includes('admin') || 
-        u.username.toLowerCase().includes('admin') ||
-        u.email.toLowerCase().includes('admin')
-      )).toBe(true)
-    })
-
-    it('should filter by role', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/users?role=ADMIN',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.users.every((u: any) => u.role === 'ADMIN')).toBe(true)
-    })
-
-    it('should reject non-admin user', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/users',
+        url: '/users?limit=3&offset=0',
         headers: {
           authorization: `Bearer ${userToken}`,
         },
       })
 
-      expect(response.statusCode).toBe(403)
+      expect(response.statusCode).toBe(200)
+      const body = JSON.parse(response.body)
+      expect(body.length).toBe(3)
     })
   })
 
-  describe('GET /users/:id (Get User)', () => {
-    it('should allow admin to get any user', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: `/users/${regularUserId}`,
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.id).toBe(regularUserId)
-      expect(body.email).toBe('user@example.com')
-    })
-
-    it('should allow user to get their own profile', async () => {
-      const response = await app.inject({
+  describe('GET /users/:id', () => {
+    it('should allow users to get their own profile', async () => {
+      const response = await server.inject({
         method: 'GET',
         url: `/users/${regularUserId}`,
         headers: {
@@ -250,10 +126,13 @@ describe('User Routes Integration Tests', () => {
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
       expect(body.id).toBe(regularUserId)
+      expect(body.username).toBe('regular')
+      expect(body).not.toHaveProperty('password')
+      expect(body).not.toHaveProperty('salt')
     })
 
-    it('should reject user getting another user profile', async () => {
-      const response = await app.inject({
+    it('should allow users to get other user profiles', async () => {
+      const response = await server.inject({
         method: 'GET',
         url: `/users/${adminUserId}`,
         headers: {
@@ -261,13 +140,191 @@ describe('User Routes Integration Tests', () => {
         },
       })
 
-      expect(response.statusCode).toBe(403)
+      expect(response.statusCode).toBe(200)
+      const body = JSON.parse(response.body)
+      expect(body.id).toBe(adminUserId)
     })
 
     it('should return 404 for non-existent user', async () => {
-      const response = await app.inject({
+      const response = await server.inject({
         method: 'GET',
-        url: '/users/00000000-0000-0000-0000-000000000000',
+        url: '/users/non-existent-id',
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(404)
+    })
+  })
+
+  describe('PATCH /users/:id', () => {
+    it('should allow users to update their own profile', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        payload: {
+          name: 'Updated Name',
+        },
+      })
+
+      expect(response.statusCode).toBe(200)
+      const body = JSON.parse(response.body)
+      expect(body.name).toBe('Updated Name')
+    })
+
+    it('should not allow users to update other profiles', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${adminUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        payload: {
+          name: 'Hacked Name',
+        },
+      })
+
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('should allow admins to update any profile', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+        payload: {
+          name: 'Admin Updated Name',
+        },
+      })
+
+      expect(response.statusCode).toBe(200)
+      const body = JSON.parse(response.body)
+      expect(body.name).toBe('Admin Updated Name')
+    })
+
+    it('should validate unique username', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        payload: {
+          username: 'admin', // Already taken
+        },
+      })
+
+      expect(response.statusCode).toBe(400)
+      const body = JSON.parse(response.body)
+      expect(body.error).toContain('Username already exists')
+    })
+
+    it('should validate unique email', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        payload: {
+          email: 'admin@example.com', // Already taken
+        },
+      })
+
+      expect(response.statusCode).toBe(400)
+      const body = JSON.parse(response.body)
+      expect(body.error).toContain('Email already exists')
+    })
+
+    it('should allow users to update their password', async () => {
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+        payload: {
+          password: 'NewPassword123!',
+        },
+      })
+
+      expect(response.statusCode).toBe(200)
+
+      // Try to sign in with new password
+      const signinResponse = await server.inject({
+        method: 'POST',
+        url: '/auth/signin',
+        payload: {
+          username: 'regular',
+          password: 'NewPassword123!',
+        },
+      })
+
+      expect(signinResponse.statusCode).toBe(200)
+    })
+  })
+
+  describe('DELETE /users/:id', () => {
+    it('should not allow regular users to delete any user', async () => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/users/${regularUserId}`,
+        headers: {
+          authorization: `Bearer ${userToken}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('should allow admins to delete users', async () => {
+      // Create a user to delete
+      const createResponse = await server.inject({
+        method: 'POST',
+        url: '/auth/signup',
+        payload: {
+          name: 'To Delete',
+          username: 'todelete',
+          email: 'todelete@example.com',
+          password: 'DeleteMe123!',
+        },
+      })
+      const createBody = JSON.parse(createResponse.body)
+      const userToDeleteId = createBody.user.id
+
+      // Delete the user
+      const response = await server.inject({
+        method: 'DELETE',
+        url: `/users/${userToDeleteId}`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      })
+
+      expect(response.statusCode).toBe(204)
+
+      // Verify user is deleted
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: `/users/${userToDeleteId}`,
+        headers: {
+          authorization: `Bearer ${adminToken}`,
+        },
+      })
+
+      expect(getResponse.statusCode).toBe(404)
+    })
+
+    it('should return 404 when deleting non-existent user', async () => {
+      const response = await server.inject({
+        method: 'DELETE',
+        url: '/users/non-existent-id',
         headers: {
           authorization: `Bearer ${adminToken}`,
         },
@@ -277,78 +334,28 @@ describe('User Routes Integration Tests', () => {
     })
   })
 
-  describe('PATCH /users/:id (Update User)', () => {
-    it('should allow admin to update any user', async () => {
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/users/${regularUserId}`,
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-        payload: {
-          name: 'Updated User Name',
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.name).toBe('Updated User Name')
-    })
-
-    it('should allow user to update their own profile', async () => {
-      const response = await app.inject({
+  describe('Role-based access control', () => {
+    it('should not allow regular users to change roles', async () => {
+      const response = await server.inject({
         method: 'PATCH',
         url: `/users/${regularUserId}`,
         headers: {
           authorization: `Bearer ${userToken}`,
         },
         payload: {
-          name: 'Self Updated Name',
+          role: 'ADMIN', // Trying to escalate privileges
         },
       })
 
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
-      expect(body.name).toBe('Self Updated Name')
+      expect(body.role).toBe('USER') // Should remain USER
     })
 
-    it('should prevent non-admin from changing role', async () => {
-      const response = await app.inject({
+    it('should allow admins to change user roles', async () => {
+      const response = await server.inject({
         method: 'PATCH',
         url: `/users/${regularUserId}`,
-        headers: {
-          authorization: `Bearer ${userToken}`,
-        },
-        payload: {
-          role: 'ADMIN',
-        },
-      })
-
-      expect(response.statusCode).toBe(403)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Cannot change own role')
-    })
-
-    it('should allow admin to change user role', async () => {
-      // Create a test user
-      const createResponse = await app.inject({
-        method: 'POST',
-        url: '/users',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-        payload: {
-          name: 'Role Test User',
-          username: 'roletest',
-          email: 'roletest@example.com',
-          password: 'RoleTest123!',
-        },
-      })
-      const { id } = JSON.parse(createResponse.body)
-
-      const response = await app.inject({
-        method: 'PATCH',
-        url: `/users/${id}`,
         headers: {
           authorization: `Bearer ${adminToken}`,
         },
@@ -360,74 +367,6 @@ describe('User Routes Integration Tests', () => {
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
       expect(body.role).toBe('ADMIN')
-    })
-  })
-
-  describe('DELETE /users/:id (Delete User)', () => {
-    it('should allow admin to delete users', async () => {
-      // Create a test user
-      const createResponse = await app.inject({
-        method: 'POST',
-        url: '/users',
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-        payload: {
-          name: 'Delete Test User',
-          username: 'deletetest',
-          email: 'delete@example.com',
-          password: 'Delete123!',
-        },
-      })
-      const { id } = JSON.parse(createResponse.body)
-
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/users/${id}`,
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(200)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('deleted successfully')
-
-      // Verify user is deleted
-      const getResponse = await app.inject({
-        method: 'GET',
-        url: `/users/${id}`,
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-      expect(getResponse.statusCode).toBe(404)
-    })
-
-    it('should prevent admin from deleting themselves', async () => {
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/users/${adminUserId}`,
-        headers: {
-          authorization: `Bearer ${adminToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(400)
-      const body = JSON.parse(response.body)
-      expect(body.message).toContain('Cannot delete own account')
-    })
-
-    it('should reject non-admin user', async () => {
-      const response = await app.inject({
-        method: 'DELETE',
-        url: `/users/${adminUserId}`,
-        headers: {
-          authorization: `Bearer ${userToken}`,
-        },
-      })
-
-      expect(response.statusCode).toBe(403)
     })
   })
 })

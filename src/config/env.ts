@@ -19,6 +19,9 @@ const envSchema = z.object({
 
   // Bcrypt
   BCRYPT_ROUNDS: z.string().transform(Number).pipe(z.number().positive()).default('10'),
+
+  // Git
+  CURRENT_COMMIT_HASH: z.string().optional(),
 })
 
 // Parse and validate environment variables

@@ -9,8 +9,8 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
     openapi: {
       info: {
         title: 'Fastify API',
-        description: 'API documentation for Fastify application',
-        version: '1.0.0',
+        description: 'API documentation for Fastify application. Current commit: 28c1dd2',
+        version: '1.0.0 (commit 28c1dd2)',
         contact: {
           name: 'Tung Nguyen',
           email: 'nguyenmanhtung848@gmail.com',

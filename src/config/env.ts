@@ -11,12 +11,7 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
-  // Database
-  DB_USER: z.string(),
-  DB_PASSWORD: z.string(),
-  DB_NAME: z.string(),
-  DB_PORT: z.string().transform(Number).pipe(z.number().positive()),
-
+  DATABASE_URL: z.string().min(1),
   // JWT
   JWT_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
@@ -36,12 +31,6 @@ if (!parsedEnv.success) {
 }
 
 export const config = parsedEnv.data
-
-// Construct DATABASE_URL for Prisma (only if not already set by test environment)
-if (!process.env.DATABASE_URL) {
-  const databaseUrl = `postgresql://${config.DB_USER}:${config.DB_PASSWORD}@localhost:${String(config.DB_PORT)}/${config.DB_NAME}?schema=public`
-  process.env.DATABASE_URL = databaseUrl
-}
 
 // Type for the config
 export type Config = z.infer<typeof envSchema>

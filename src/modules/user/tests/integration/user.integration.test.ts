@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from '@jest/globals'
 import Fastify from 'fastify'
-import { app } from '../../../../app.js'
-import { prisma } from '../../../../services/prisma.js'
+import { app } from '../../../../app'
+import { prisma } from '../../../../services/prisma'
 
 describe('User Routes Integration Tests', () => {
   let server: any

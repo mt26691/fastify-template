@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from '@jest/globals'
 import Fastify from 'fastify'
-import { app } from '../../src/app.js'
+import { app } from '../../src/app'
 
 describe('Authentication API', () => {
   let server: any

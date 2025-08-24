@@ -1,9 +1,9 @@
-import { beforeAll, afterAll, beforeEach } from 'vitest'
+import { beforeAll, afterAll, beforeEach } from '@jest/globals'
 import { config as dotenvConfig } from 'dotenv'
-import { prisma } from '../../src/services/prisma.js'
+import { prisma } from '../../src/services/prisma'
 import { execSync } from 'child_process'
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql'
-import { logger } from '../../src/utils/logger.js'
+import { logger } from '../../src/utils/logger'
 
 // Set NODE_ENV before loading environment variables
 process.env.NODE_ENV = 'test'
@@ -15,7 +15,7 @@ let container: StartedPostgreSqlContainer
 
 beforeAll(async () => {
   logger.info('Starting PostgreSQL test container...')
-  
+
   // Start PostgreSQL container
   container = await new PostgreSqlContainer('postgres:16-alpine')
     .withDatabase('fastify_test_db')
@@ -26,17 +26,17 @@ beforeAll(async () => {
   // Update DATABASE_URL with container connection string
   const databaseUrl = `postgresql://test_user:test_password@${container.getHost()}:${container.getMappedPort(5432)}/fastify_test_db?schema=public`
   process.env.DATABASE_URL = databaseUrl
-  
+
   logger.info('Test container started, running migrations...')
-  
+
   try {
     // Run migrations
-    execSync('npx prisma migrate deploy', { 
+    execSync('npx prisma migrate deploy', {
       stdio: 'inherit',
       env: {
         ...process.env,
-        DATABASE_URL: databaseUrl
-      }
+        DATABASE_URL: databaseUrl,
+      },
     })
     logger.info('Migrations completed successfully')
   } catch (error) {
@@ -56,10 +56,10 @@ beforeEach(async () => {
 
 afterAll(async () => {
   logger.info('Cleaning up test environment...')
-  
+
   // Disconnect Prisma
   await prisma.$disconnect()
-  
+
   // Stop and remove container
   if (container) {
     await container.stop()

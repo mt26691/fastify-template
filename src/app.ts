@@ -1,11 +1,11 @@
 import { FastifyPluginAsync } from 'fastify'
 import AutoLoad from '@fastify/autoload'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = join(__filename, '..')
+const __dirname = dirname(__filename)
 
 export const app: FastifyPluginAsync = async (fastify, opts) => {
   // Set TypeBox as the type provider

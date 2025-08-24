@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from '@jest/globals'
 import Fastify from 'fastify'
-import { app } from '../../../../app.js'
-import { prisma } from '../../../../services/prisma.js'
+import { app } from '../../../../app'
+import { prisma } from '../../../../services/prisma'
 
 describe('Health Routes Integration Tests', () => {
   let server: any
@@ -61,7 +61,7 @@ describe('Health Routes Integration Tests', () => {
 
     it('should handle concurrent requests', async () => {
       const requests = Array(10).fill(null).map(() => 
-        app.inject({
+        server.inject({
           method: 'GET',
           url: '/health',
         })

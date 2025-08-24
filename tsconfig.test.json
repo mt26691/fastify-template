@@ -1,10 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "esnext",
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+    "target": "ES2022",
+    "isolatedModules": true
+  }
 }

@@ -23,6 +23,6 @@ export const app: FastifyPluginAsync = async (fastify, opts) => {
     matchFilter: (path) => path.endsWith('.routes.ts') || path.endsWith('.routes.js'),
     autoHooks: true,
     cascadeHooks: true,
-    options: { ...opts },
+    options: { ...opts, prefix: '/api' },
   })
 }

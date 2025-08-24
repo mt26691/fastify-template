@@ -11,6 +11,11 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
         title: 'Fastify API',
         description: 'API documentation for Fastify application',
         version: '1.0.0',
+        contact: {
+          name: 'Tung Nguyen',
+          email: 'nguyenmanhtung848@gmail.com',
+          url: 'https://www.linkedin.com/in/mt26691/',
+        },
       },
       servers: [
         {
@@ -18,16 +23,17 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify, _opts) => {
           description: 'Development server',
         },
       ],
-      tags: [
-        { name: 'Health', description: 'Health check endpoints' },
-        { name: 'Authentication', description: 'User authentication endpoints' },
-      ],
       components: {
         securitySchemes: {
           bearerAuth: {
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
+          },
+          apiKey: {
+            type: 'apiKey',
+            in: 'header',
+            name: 'x-api-key',
           },
         },
       },
